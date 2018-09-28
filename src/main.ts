@@ -5,13 +5,13 @@ class Synapse {
         this.inNeuron = inputNeuron;
         this.outNeuron = outputNeuron;
         this.weight = Math.random();
-        this.delta = 0;
+        this.gradient = 0;
     }
 
     public inNeuron: Neuron;
     public outNeuron: Neuron;
     public weight: number;
-    public delta: number;
+    protected gradient: number;
 
     public setInput = (neuron: Neuron) => {
         this.inNeuron = neuron;
@@ -19,6 +19,10 @@ class Synapse {
 
     public setOutput = (neuron: Neuron) => {
         this.outNeuron = neuron;
+    };
+
+    public evalGradient = (value: number, delta: number) => {
+        this.gradient = value * delta;
     };
 }
 
@@ -28,12 +32,14 @@ class Neuron {
         this.outputValue = 0;
         this.inputSynapses = [];
         this.outputSynapses = [];
+        this.delta = 0;
     }
 
     protected inputValue: number;
     protected outputValue: number;
     protected inputSynapses: Synapse[];
     protected outputSynapses: Synapse[];
+    protected delta: number;
 
     setInput = (value: number) => {
         this.inputValue += value;
@@ -60,6 +66,14 @@ class Neuron {
             }
         });
     };
+
+    backwardPass = () => {
+        this.inputSynapses.map((synapse: Synapse) => {
+            synapse.inNeuron.evalDelta(synapse.weight, this.delta);
+        });
+    };
+
+    evalDelta = (weight: number, delta: number) => {};
 }
 
 class InputNeuron extends Neuron {
@@ -85,6 +99,12 @@ class OutputNeuron extends Neuron {
             Math.pow(this.ideal - this.outputValue, 2) / this._setCount;
     };
 
+    evalDelta = () => {
+        this.delta =
+            (this.ideal - this.outputValue) *
+            ((1 - this.outputValue) * this.outputValue);
+    };
+
     setIdeal = (value: number) => {
         this.ideal = value;
     };
@@ -106,6 +126,11 @@ class OutputNeuron extends Neuron {
 class HiddenNeuron extends Neuron {
     activation = () => {
         this.outputValue = sigmoid(this.inputValue);
+    };
+
+    evalDelta = (weight: number, delta: number) => {
+        this.delta =
+            (1 - this.outputValue) * this.outputValue * (weight * delta);
     };
 }
 
