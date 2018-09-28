@@ -1,70 +1,112 @@
 import sigmoid from "./sigmoid";
 
-interface ISynapse {
-  neuron: Neuron;
-  weight: number;
-  lastDelta: number;
+class Synapse {
+    constructor(inputNeuron: Neuron, outputNeuron: Neuron) {
+        this.inNeuron = inputNeuron;
+        this.outNeuron = outputNeuron;
+        this.weight = Math.random();
+        this.delta = 0;
+    }
+
+    public inNeuron: Neuron;
+    public outNeuron: Neuron;
+    public weight: number;
+    public delta: number;
+
+    public setInput = (neuron: Neuron) => {
+        this.inNeuron = neuron;
+    };
+
+    public setOutput = (neuron: Neuron) => {
+        this.outNeuron = neuron;
+    };
 }
 
 class Neuron {
-  constructor() {
-    this.inputValue = 0;
-    this.outputValue = 0;
-    this.synapses = [];
-  }
+    constructor() {
+        this.inputValue = 0;
+        this.outputValue = 0;
+        this.inputSynapses = [];
+        this.outputSynapses = [];
+    }
 
-  protected inputValue: number;
-  protected outputValue: number;
-  protected synapses: ISynapse[];
+    protected inputValue: number;
+    protected outputValue: number;
+    protected inputSynapses: Synapse[];
+    protected outputSynapses: Synapse[];
 
-  setInput = (value: number) => {
-    this.inputValue += value;
-  };
+    setInput = (value: number) => {
+        this.inputValue += value;
+    };
 
-  addSynapse = (synapse: ISynapse) => {
-    this.synapses.push(synapse);
-  };
+    public addInput = (synapse: Synapse) => {
+        this.inputSynapses.push(synapse);
+    };
 
-  next = () => {
-    this.synapses.map((synapse: ISynapse) => {
-      synapse.neuron.setInput(synapse.weight * this.outputValue);
-    });
-  };
+    private addOutput = (synapse: Synapse) => {
+        this.outputSynapses.push(synapse);
+    };
+
+    addLink = (neuron: Neuron) => {
+        let synapse = new Synapse(this, neuron);
+        this.addOutput(synapse);
+        neuron.addInput(synapse);
+    };
+
+    forwardPass = () => {
+        this.outputSynapses.map((synapse: Synapse) => {
+            if (synapse) {
+                synapse.outNeuron.setInput(synapse.weight * this.outputValue);
+            }
+        });
+    };
 }
 
 class InputNeuron extends Neuron {
-  activation = () => {
-    this.outputValue = this.inputValue;
-  };
+    activation = () => {
+        this.outputValue = this.inputValue;
+    };
 }
 
 class OutputNeuron extends Neuron {
-  constructor() {
-    super();
-    this.error = 0;
-    this.ideal = 0;
-  }
+    constructor() {
+        super();
+        this.error = 0;
+        this.ideal = 0;
+        this._setCount = 0;
+    }
 
-  protected error: number;
-  protected ideal: number;
+    protected error: number;
+    protected ideal: number;
+    protected _setCount: number;
 
-  evalError = () => {
-    this.error = ((1 - this.outputValue) ^ 2) / 1;
-  };
+    evalError = () => {
+        this.error =
+            Math.pow(this.ideal - this.outputValue, 2) / this._setCount;
+    };
 
-  setIdeal = (value: number) => {
-    this.ideal = value;
-  };
+    setIdeal = (value: number) => {
+        this.ideal = value;
+    };
 
-  activation = () => {
-    this.outputValue = sigmoid(this.inputValue);
-  };
+    setCount = (count: number) => {
+        this._setCount = count;
+    };
+
+    activation = () => {
+        this.outputValue = sigmoid(this.inputValue);
+    };
+
+    result = () => {
+        console.log("RESULT: ", this.outputValue);
+        console.log("ERROR: ", this.error);
+    };
 }
 
 class HiddenNeuron extends Neuron {
-  activation = () => {
-    this.outputValue = sigmoid(this.inputValue);
-  };
+    activation = () => {
+        this.outputValue = sigmoid(this.inputValue);
+    };
 }
 
 //Creating neurons
@@ -78,28 +120,33 @@ let neurons: Neuron[] = [I1, I2, H1, H2, O1];
 
 //Initializing neurons
 I1.setInput(1.2);
-I1.addSynapse({ neuron: H1, weight: 0.3, lastDelta: 0 });
-I1.addSynapse({ neuron: H2, weight: 0.4, lastDelta: 0 });
+I1.addLink(H1);
+I1.addLink(H2);
 I1.activation();
-I1.next();
+I1.forwardPass();
 
 I2.setInput(0.7);
-I2.addSynapse({ neuron: H1, weight: 0.5, lastDelta: 0 });
-I2.addSynapse({ neuron: H2, weight: 0.6, lastDelta: 0 });
+I2.addLink(H1);
+I2.addLink(H2);
 I2.activation();
-I2.next();
+I2.forwardPass();
 
-H1.addSynapse({ neuron: O1, weight: 0.1, lastDelta: 0 });
-H2.addSynapse({ neuron: O1, weight: 0.2, lastDelta: 0 });
+H1.addLink(O1);
+H2.addLink(O1);
 
 H1.activation();
+H1.forwardPass();
 H2.activation();
+H2.forwardPass();
 
 O1.setIdeal(1);
+O1.setCount(1);
 O1.activation();
 O1.evalError();
 
 neurons.map(neuron => {
-  console.log(neuron);
-  console.log("===================");
+    console.log(neuron);
+    console.log("===================");
 });
+
+O1.result();
