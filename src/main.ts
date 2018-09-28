@@ -33,6 +33,7 @@ class Neuron {
         this.inputSynapses = [];
         this.outputSynapses = [];
         this.delta = 0;
+        this.weight_delta_sum = 0;
     }
 
     protected inputValue: number;
@@ -40,6 +41,7 @@ class Neuron {
     protected inputSynapses: Synapse[];
     protected outputSynapses: Synapse[];
     protected delta: number;
+    protected weight_delta_sum: number;
 
     setInput = (value: number) => {
         this.inputValue += value;
@@ -70,6 +72,7 @@ class Neuron {
     backwardPass = () => {
         this.inputSynapses.map((synapse: Synapse) => {
             synapse.inNeuron.evalDelta(synapse.weight, this.delta);
+            synapse.evalGradient(synapse.inNeuron.outputValue, this.delta);
         });
     };
 
@@ -129,8 +132,9 @@ class HiddenNeuron extends Neuron {
     };
 
     evalDelta = (weight: number, delta: number) => {
+        this.weight_delta_sum += weight * delta;
         this.delta =
-            (1 - this.outputValue) * this.outputValue * (weight * delta);
+            (1 - this.outputValue) * this.outputValue * this.weight_delta_sum;
     };
 }
 
